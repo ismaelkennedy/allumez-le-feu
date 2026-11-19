@@ -1,0 +1,57 @@
+@import url("https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap");
+
+:root {
+  --cendre: #e6e8e3;
+  --pin: #1d3328;
+  --aiguille: #57675c;
+  --trait: #b9c0b7;
+  --rouge-engin: #b71c1c; /* réservé aux données : feux, danger élevé */
+}
+
+/* Titres en Archivo étroit, comme le lettrage des engins de secours. */
+.stApp h1,
+.stApp h2,
+.stApp h3 {
+  font-stretch: 75%;
+  letter-spacing: -0.01em;
+  color: var(--pin);
+}
+
+.stApp h1 {
+  font-size: clamp(2.75rem, 7vw, 5rem);
+  font-weight: 800;
+  line-height: 0.95;
+  padding-bottom: 0.25rem;
+}
+
+/* .stApp devant : sinon les règles de Streamlit sur les paragraphes écrasent la taille.
+   Pas de balise HTML dans ce fichier : st.html supprimerait tout le style. */
+.stApp .chapeau {
+  margin-bottom: 1.5rem;
+  text-wrap: pretty;
+  font-size: 1.15rem;
+  line-height: 1.5;
+  color: var(--aiguille);
+}
+
+/* Le pointillé signale ce qui reste à faire. */
+.a-rediger {
+  padding: 0.25rem 0 0.25rem 1rem;
+  border-left: 3px dashed var(--trait);
+  color: var(--aiguille);
+}
+
+.stApp [data-testid="stMarkdownContainer"] p {
+  max-width: 70ch;
+}
+
+[data-testid="stMetric"],
+.st-key-graphique {
+  padding: 1rem 1.25rem;
+  border: 1px dashed var(--trait);
+  border-radius: 4px;
+}
+
+.stApp [data-testid="stTab"] p {
+  font-size: 1.05rem;
+}
