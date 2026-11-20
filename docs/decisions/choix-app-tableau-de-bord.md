@@ -3,6 +3,7 @@
 > **Décision** : une app **Streamlit** à deux vues, une **carte** des feux de Nouvelle-Aquitaine jour par jour et un **tableau de bord décisionnel** construit d'après les fiches KPI (`KPI_fiches.docx`).
 > Le seuil actuel de la **Météo des forêts n'est plus utilisé** : il est jugé obsolète, et le tableau de bord aide à le **redéfinir** à partir de la température et de l'humidité.
 > Les indicateurs sans donnée publique (délai d'intervention, couverture en eau DFCI) sont remplacés par des **proxys déclarés**, en attendant les données du SDIS et de la DFCI.
+> **C'est un prototype** : l'app lit pour l'instant les fichiers téléchargés directement avec pandas, pour prévisualiser et analyser. À terme, elle lira les tables finales du pipeline décrit dans `choix-techno.md` (Python → DuckDB → dbt).
 
 | | |
 |---|---|
@@ -86,5 +87,5 @@ Organisé selon l'arbre de KPIs de `KPI_fiches.docx` : un KPI de décision, des 
 | Données du SDIS (heures d'alerte, de départ, d'arrivée ; moyens engagés) | Les demander, pour remplacer le temps de trajet par le vrai délai d'intervention |
 | Points d'eau DFCI et BD Forêt en polygones | Vérifier l'accès sur PIGMA, pour calculer la couverture en eau de la forêt (fiche 3) |
 | Autres années de la BDIFF | Les exporter, pour caler le seuil et suivre les KPIs dans le temps |
-| Alignement avec le pipeline (`choix-techno.md`) | Les scripts écrivent dans `data/<source>/` et l'app lit les fichiers avec pandas. À brancher sur `data/raw/` et sur les tables dbt (marts) quand le pipeline sera en place |
+| Passage au pipeline (`choix-techno.md`) | Aujourd'hui, les scripts écrivent dans `data/<source>/` et l'app lit les fichiers avec pandas (prototype). Ensuite : scripts → `data/raw/`, transformations et tests dans dbt + DuckDB, et `main/donnees.py` lit les tables finales (marts) au lieu des fichiers. La carte et le tableau de bord ne changent pas : seul `donnees.py` change de source |
 | Nouveau seuil de renforcement | Le fixer à partir de la grille température × humidité, puis le comparer à l'ancien (archives Météo des forêts gardées pour ça) |
