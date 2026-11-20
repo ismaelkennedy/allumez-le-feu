@@ -45,13 +45,6 @@
   max-width: 70ch;
 }
 
-[data-testid="stMetric"],
-.st-key-graphique {
-  padding: 1rem 1.25rem;
-  border: 1px dashed var(--trait);
-  border-radius: 4px;
-}
-
 .stApp [data-testid="stTab"] p {
   font-size: 1.05rem;
 }
