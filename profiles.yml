@@ -1,0 +1,11 @@
+# Connexion dbt -> DuckDB. Aucun secret : la base est un fichier local, non versionné.
+# dbt lit ce fichier parce qu'on lance les commandes depuis la racine du dépôt.
+feux_foret:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: data/warehouse/feux.duckdb
+      threads: 4
+      extensions:
+        - spatial

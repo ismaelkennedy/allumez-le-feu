@@ -221,3 +221,17 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- Projet feux de forêt ---
+# Données : jamais versionnées (RGPD, licences, taille). Chacun les retélécharge avec les scripts de extract/
+# On garde seulement les dossiers vides (.gitkeep) pour que dbt trouve data/warehouse/ après un clone.
+data/**
+!data/**/
+!data/**/.gitkeep
+*.duckdb
+*.duckdb.wal
+# dbt
+target/
+dbt_packages/
+logs/
+.user.yml
