@@ -102,13 +102,14 @@ def grille_meteo(feux, meteo, codes):
 def carte_chaleur(grille, colonne, titre, nom_valeur, format_valeur):
     st.markdown(f"**{titre}**")
     # Domaines fixés : la grille garde toutes ses lignes et colonnes, même quand des cases sont vides.
+    # Espace entre les cases plutôt qu'un contour blanc : le fond du thème (clair ou sombre) passe entre elles.
     base = alt.Chart(grille).transform_filter(f"isValid(datum.{colonne})").encode(
-        alt.X("humidite:O", scale=alt.Scale(domain=HUMIDITES[1]), title="Humidité min",
+        alt.X("humidite:O", scale=alt.Scale(domain=HUMIDITES[1], paddingInner=0.04), title="Humidité min",
               axis=alt.Axis(labelAngle=0, labelOverlap=False, labelExpr="replace(datum.label, 'moins de ', '< ')")),
-        alt.Y("temperature:O", scale=alt.Scale(domain=TEMPERATURES[1][::-1]), title="Température max",
+        alt.Y("temperature:O", scale=alt.Scale(domain=TEMPERATURES[1][::-1], paddingInner=0.06), title="Température max",
               axis=alt.Axis(labelOverlap=False)),
     )
-    cases = base.mark_rect(cornerRadius=3, stroke="white", strokeWidth=2).encode(
+    cases = base.mark_rect(cornerRadius=3).encode(
         alt.Color(f"{colonne}:Q", scale=alt.Scale(scheme="reds", zero=True), title=nom_valeur, legend=None),
         tooltip=[
             alt.Tooltip("temperature:O", title="Température"),

@@ -1,12 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap");
 
-:root {
-  --cendre: #e6e8e3;
-  --pin: #1d3328;
-  --aiguille: #57675c;
-  --trait: #b9c0b7;
-  --rouge-engin: #b71c1c; /* réservé aux données : feux, danger élevé */
-}
+/* Aucune couleur fixée ici : elles viennent du thème clair ou sombre de .streamlit/config.toml. */
 
 /* Titres en Archivo étroit, comme le lettrage des engins de secours. */
 .stApp h1,
@@ -14,7 +8,6 @@
 .stApp h3 {
   font-stretch: 75%;
   letter-spacing: -0.01em;
-  color: var(--pin);
 }
 
 .stApp h1 {
@@ -31,14 +24,14 @@
   text-wrap: pretty;
   font-size: 1.15rem;
   line-height: 1.5;
-  color: var(--aiguille);
+  opacity: 0.8; /* texte du thème, atténué : lisible en clair comme en sombre */
 }
 
 /* Le pointillé signale ce qui reste à faire. */
 .a-rediger {
   padding: 0.25rem 0 0.25rem 1rem;
-  border-left: 3px dashed var(--trait);
-  color: var(--aiguille);
+  border-left: 3px dashed currentColor;
+  opacity: 0.7;
 }
 
 .stApp [data-testid="stMarkdownContainer"] p {

@@ -1,9 +1,18 @@
 [theme]
-base = "light"
+font = "Archivo, sans-serif"
+baseRadius = "small"
+
+# Deux palettes : l'app suit le mode clair ou sombre du système, et le menu ⋮ permet de changer.
+[theme.light]
 primaryColor = "#2f6b4c"
 backgroundColor = "#e6e8e3"
 secondaryBackgroundColor = "#f3f4f0"
 textColor = "#1d3328"
 borderColor = "#b9c0b7"
-font = "Archivo, sans-serif"
-baseRadius = "small"
+
+[theme.dark]
+primaryColor = "#7fbf98"
+backgroundColor = "#121a16"
+secondaryBackgroundColor = "#1c2721"
+textColor = "#e6e8e3"
+borderColor = "#38473e"
