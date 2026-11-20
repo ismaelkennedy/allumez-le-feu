@@ -1,7 +1,7 @@
 """Tableau de bord décisionnel, construit d'après les fiches KPI du projet (KPI_fiches.docx).
 
-Le seuil actuel de la Météo des forêts étant jugé obsolète, le tableau ne s'appuie pas sur ses niveaux :
-la section « Redéfinir le seuil » montre dans quelles conditions de chaleur et d'humidité les feux partent.
+La section « Redéfinir le seuil » montre d'abord ce que vaut le seuil actuel (départs de feu et surfaces brûlées
+par niveau de la Météo des forêts), puis dans quelles conditions de chaleur et d'humidité les feux partent.
 """
 
 import altair as alt
@@ -9,14 +9,24 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from donnees import FEUX, charger_feux, charger_meteo_departements, charger_secours, charger_trajets, km_au_plus_proche
+from donnees import (
+    FEUX,
+    charger_feux,
+    charger_meteo_departements,
+    charger_meteo_des_forets,
+    charger_secours,
+    charger_trajets,
+    km_au_plus_proche,
+)
 
 ROUGE, GRIS = "#b71c1c", "#b9c0b7"  # rouge réservé à ce qu'on veut faire ressortir, le reste en gris
+NIVEAUX = {1: "1 faible", 2: "2 modéré", 3: "3 élevé", 4: "4 très élevé"}  # échelle de la Météo des forêts
 DISTANCES = ([0, 2, 5, np.inf], ["moins de 2 km", "2 à 5 km", "5 km ou plus"])
 TRAJETS = ([0, 10, 20, np.inf], ["moins de 10 min", "10 à 20 min", "20 min ou plus"])
 TEMPERATURES = ([-np.inf, 20, 25, 30, 35, np.inf], ["moins de 20°", "20 à 25°", "25 à 30°", "30 à 35°", "35° ou plus"])
 HUMIDITES = ([0, 30, 40, 50, 60, np.inf], ["moins de 30 %", "30 à 40 %", "40 à 50 %", "50 à 60 %", "60 % ou plus"])
-JOURS_MINI = 10  # en dessous, une case de la grille météo n'a pas assez de jours pour un taux fiable
+JOURS_MINI = 10  # en dessous, une case de la grille météo (ou un niveau) n'a pas assez de jours pour un taux fiable
+FEUX_MINI = 30  # en dessous, un pourcentage calculé sur ces feux est fragile
 
 
 def fr(x, decimales=0):
@@ -56,7 +66,7 @@ def barres(valeurs, titre, *, rouges=(), horizontal=False, ordonne=False, format
         .encode(
             # En vertical, Vega masque les étiquettes qui se chevauchent ; en horizontal, toutes restent lisibles.
             axe_cat("categorie:N", sort=tri, title=None, axis=alt.Axis(labelAngle=0, labelLimit=220, labelOverlap=not horizontal)),
-            axe_val("valeur:Q", title=nom_valeur, axis=alt.Axis(format=format_valeur)),
+            axe_val("valeur:Q", title=nom_valeur, axis=alt.Axis(format=format_valeur, tickCount=6)),
             color=alt.Color("couleur:N", scale=None),
             tooltip=[
                 alt.Tooltip("categorie:N", title=" "),
@@ -69,26 +79,54 @@ def barres(valeurs, titre, *, rouges=(), horizontal=False, ordonne=False, format
 
 
 def part_au_dessus(feux, colonne, tranches, quoi):
-    """Part des feux de plus de 1 ha par tranche (distance ou temps), et le message qui compare les tranches extrêmes."""
+    """Part des feux de plus de 1 ha par tranche (distance ou temps), le message qui compare les tranches extrêmes,
+    et la barre à mettre en rouge : aucune si une tranche comparée a moins de FEUX_MINI feux."""
     bornes, libelles = tranches
     groupes = (feux["ha"] > 1).groupby(pd.cut(feux[colonne], bornes, right=False, labels=libelles), observed=False)
     parts, effectifs = groupes.mean().dropna(), groupes.size()
-    message = f"Part des feux de plus de 1 ha selon l'éloignement {quoi}"
+    message, fiable = f"Part des feux de plus de 1 ha selon l'éloignement {quoi}", False
     if len(parts) >= 2 and parts.index[0] == libelles[0] and parts.index[-1] == libelles[-1]:
         message = (
             f"À {libelles[-1]} {quoi}, {pc(parts.iloc[-1])} des feux dépassent 1 ha, "
             f"contre {pc(parts.iloc[0])} à {libelles[0]}"
         )
+        petite = min(libelles[0], libelles[-1], key=lambda t: effectifs[t])
+        fiable = effectifs[petite] >= FEUX_MINI
+        if not fiable:
+            message += f" (seulement {effectifs[petite]} feux à {petite} : à confirmer)"
     parts.index = [f"{t} ({effectifs[t]} feux)" for t in parts.index]
-    return parts, message
+    return parts, message, [parts.index[-1]] if fiable else []
+
+
+def jours_avec_feux(jours, feux, codes):
+    """Jours-départements de `jours` pris sur le territoire et l'année des feux, avec leurs départs et hectares brûlés."""
+    jours = jours[jours["Département"].isin(codes) & (jours["AAAAMMJJ"] // 10000 == feux["Année"].iloc[0])]
+    par_jour = feux.groupby(["Département", "AAAAMMJJ"]).agg(n=("id", "size"), ha=("ha", "sum")).reset_index()
+    return jours.merge(par_jour, on=["Département", "AAAAMMJJ"], how="left").fillna({"n": 0, "ha": 0})
+
+
+def par_niveau(feux, mdf, codes):
+    """Départs de feu et hectares brûlés par jour, selon le niveau de la Météo des forêts prévu la veille.
+
+    Les niveaux vus moins de JOURS_MINI jours sont écartés ; l'index donne le niveau et son nombre de jours.
+    """
+    jours = jours_avec_feux(mdf, feux, codes)
+    niveaux = jours.groupby("niveau").agg(jours=("n", "size"), departs=("n", "mean"), surface=("ha", "mean")).reset_index()
+    niveaux = niveaux[niveaux["jours"] >= JOURS_MINI]
+    return niveaux.set_index(pd.Index([f"{NIVEAUX.get(n, n)} ({j} jours)" for n, j in zip(niveaux["niveau"], niveaux["jours"])]))
+
+
+# 10 jours au niveau 1 sans feu, puis 10 jours au niveau 2 avec un feu de 2 ha par jour.
+assert par_niveau(
+    pd.DataFrame({"id": range(10), "Département": "33", "Année": 2025, "AAAAMMJJ": range(20250611, 20250621), "ha": 2.0}),
+    pd.DataFrame({"Département": "33", "AAAAMMJJ": range(20250601, 20250621), "niveau": [1] * 10 + [2] * 10}),
+    ["33"],
+)[["departs", "surface"]].values.tolist() == [[0, 0], [1, 2]]
 
 
 def grille_meteo(feux, meteo, codes):
     """Départs de feu et surface brûlée par jour, selon la température et l'humidité du jour dans le département."""
-    jours = meteo[meteo["Département"].isin(codes)].dropna(subset=["TX", "UN"])
-    jours = jours[jours["AAAAMMJJ"] // 10000 == feux["Année"].iloc[0]]
-    par_jour = feux.groupby(["Département", "AAAAMMJJ"]).agg(n=("id", "size"), ha=("ha", "sum")).reset_index()
-    jours = jours.merge(par_jour, on=["Département", "AAAAMMJJ"], how="left").fillna({"n": 0, "ha": 0})
+    jours = jours_avec_feux(meteo.dropna(subset=["TX", "UN"]), feux, codes)
     jours["temperature"] = pd.cut(jours["TX"], TEMPERATURES[0], right=False, labels=TEMPERATURES[1])
     jours["humidite"] = pd.cut(jours["UN"], HUMIDITES[0], right=False, labels=HUMIDITES[1])
     grille = jours.groupby(["temperature", "humidite"], observed=False).agg(jours=("n", "size"), n=("n", "sum"), ha=("ha", "sum"))
@@ -127,11 +165,10 @@ def carte_chaleur(grille, colonne, titre, nom_valeur, format_valeur):
 
 
 def afficher(noms_departements):
-    st.header("Tableau de bord décisionnel")
     st.markdown(
-        "**Décision :** comment mobiliser les pompiers de Nouvelle-Aquitaine en 2027 pour réduire les surfaces brûlées. "
-        "**Options :** prévisions (redéfinir le seuil de renforcement), création de points d'eau, débroussaillement. "
-        "**Horizon :** saison des feux 2027."
+        "Comment mobiliser les pompiers pendant la saison des feux 2027 pour réduire les surfaces brûlées ? "
+        "Trois leviers sont étudiés : mieux prévoir les jours à risque (redéfinir le seuil de renforcement), "
+        "créer des points d'eau et débroussailler."
     )
     if not FEUX.exists():
         st.info("Ajoute l'export BDIFF dans data/Incendies.csv (voir sources/README.md).")
@@ -140,8 +177,13 @@ def afficher(noms_departements):
     feux = preparer(charger_feux(), secours, trajets)
 
     gauche, droite = st.columns([2, 1])
+    territoires = ["NA", *noms_departements]
     territoire = gauche.selectbox(
-        "Territoire", ["NA", *noms_departements], format_func=lambda c: noms_departements.get(c, "Nouvelle-Aquitaine")
+        "Territoire",
+        territoires,
+        index=territoires.index("33") if "33" in territoires else 0,
+        format_func=lambda c: noms_departements.get(c, "Nouvelle-Aquitaine"),
+        help="La Gironde par défaut : la commande vient du SDIS 33. La région sert à comparer.",
     )
     annee = droite.selectbox("Année", sorted(feux["Année"].unique(), reverse=True), help="Années de l'export BDIFF.")
     codes = list(noms_departements) if territoire == "NA" else [territoire]
@@ -151,7 +193,7 @@ def afficher(noms_departements):
     if feux.empty:
         st.info("Aucun départ de feu sur ce territoire cette année-là dans l'export BDIFF.")
         return
-    if len(feux) < 30:
+    if len(feux) < FEUX_MINI:
         st.warning(f"Seulement {len(feux)} départs de feu : les pourcentages sont fragiles.")
     estimees = (feux["Précision des surfaces"] == "Estimées").mean()
 
@@ -179,8 +221,8 @@ def afficher(noms_departements):
         )
         st.caption(
             "La fiche 1 rapporte la surface brûlée aux jours de danger élevé. Le seuil actuel étant à redéfinir, "
-            "la surface est donnée brute ; la section « Redéfinir le seuil » montre dans quelles conditions météo "
-            f"les feux partent. {pc(estimees)} des surfaces sont estimées, pas mesurées. "
+            "la surface est donnée brute ; la section « Redéfinir le seuil » la donne par niveau de la Météo des forêts "
+            f"et selon la météo du jour. {pc(estimees)} des surfaces sont estimées, pas mesurées. "
             f"{fr(sans_surface)} feux sans surface, exclus."
         )
 
@@ -205,8 +247,8 @@ def afficher(noms_departements):
         )
         st.caption(f"{fr(echappes)} feux de plus de 10 ha sur {fr(len(feux))} départs.")
         if "minutes" in feux:
-            parts, message = part_au_dessus(feux, "minutes", TRAJETS, "de la caserne")
-            barres(parts, message, rouges=[parts.index[-1]], ordonne=True, format_valeur=".0%", nom_valeur="Feux de plus de 1 ha")
+            parts, message, rouges = part_au_dessus(feux, "minutes", TRAJETS, "de la caserne")
+            barres(parts, message, rouges=rouges, ordonne=True, format_valeur=".0%", nom_valeur="Feux de plus de 1 ha")
             st.caption("Temps de trajet estimé : le vrai délai d'intervention est dans les données du SDIS.")
         else:
             st.info("Lance `python sources/calculer_temps_trajet.py` pour estimer les temps de trajet depuis les casernes.")
@@ -227,8 +269,8 @@ def afficher(noms_departements):
                 pc((feux["km_eau_massif"] < 2).mean()),
                 help="Seulement citernes, bassins et points d'aspiration : les points d'eau des massifs.",
             )
-            parts, message = part_au_dessus(feux, "km_eau_massif", DISTANCES, "d'un point d'eau de massif")
-            barres(parts, message, rouges=[parts.index[-1]], ordonne=True, format_valeur=".0%", nom_valeur="Feux de plus de 1 ha")
+            parts, message, rouges = part_au_dessus(feux, "km_eau_massif", DISTANCES, "d'un point d'eau de massif")
+            barres(parts, message, rouges=rouges, ordonne=True, format_valeur=".0%", nom_valeur="Feux de plus de 1 ha")
             st.caption(
                 "La fiche 3 mesure la part de la forêt à moins de 2 km d'un point d'eau DFCI. Sans la BD Forêt "
                 "ni les points d'eau DFCI (PIGMA), on mesure ici la part des départs de feu couverts. "
@@ -317,13 +359,44 @@ def afficher(noms_departements):
 
     # ---- Redéfinir le seuil (prévisions) -------------------------------------------------------
     st.subheader("Redéfinir le seuil : dans quelles conditions les feux partent-ils ?")
+    unite = "par jour et par département" if territoire == "NA" else "par jour"
+
+    # Le seuil actuel d'abord : la commande demande à partir de quel niveau de la Météo des forêts déclencher.
+    mdf = charger_meteo_des_forets()
+    niveaux = par_niveau(feux, mdf, codes) if mdf is not None else pd.DataFrame()
+    if niveaux.empty:
+        st.info(
+            f"Lance `python sources/telecharger_meteo_des_forets.py {annee}` pour comparer avec le seuil actuel "
+            "de la Météo des forêts (archives depuis 2024)."
+        )
+    else:
+        haut, bas = niveaux.iloc[-1], niveaux.iloc[0]
+        nom_haut, nom_bas = NIVEAUX.get(int(haut["niveau"])), NIVEAUX.get(int(bas["niveau"]))
+        graphes = [("departs", "départ de feu", "Départs de feu", 2), ("surface", "ha brûlés", "Hectares brûlés", 1)]
+        for colonne, (col, quoi, nom_valeur, decimales) in zip(st.columns(2), graphes):
+            with colonne:
+                titre = (
+                    f"Niveau {nom_haut} : {fr(haut[col], decimales)} {quoi} {unite}, "
+                    f"contre {fr(bas[col], decimales)} au niveau {nom_bas}"
+                    if len(niveaux) > 1
+                    else f"{nom_valeur} {unite} selon le niveau de la Météo des forêts"
+                )
+                barres(
+                    niveaux[col], titre, rouges=list(niveaux.index[-1:]) if len(niveaux) > 1 else [], ordonne=True,
+                    format_valeur=f".{decimales}f", nom_valeur=nom_valeur,
+                )
+        st.caption(
+            "Le seuil actuel : niveau de la Météo des forêts prévu la veille par Météo-France (1 faible à 4 très élevé), "
+            "un seul niveau par département. Publié de juin à septembre : les feux hors saison ne sont pas comptés. "
+            f"Niveaux vus moins de {JOURS_MINI} jours dans l'année : non affichés."
+        )
+
     meteo = charger_meteo_departements()
     grille, moyenne_departs, moyenne_surface = grille_meteo(feux, meteo, codes)
     if grille["departs"].notna().sum() == 0:
         st.info("Lance `python sources/telecharger_meteo.py` pour croiser les feux avec la température et l'humidité.")
     else:
         pire = grille.loc[grille["departs"].idxmax()]
-        unite = "par jour et par département" if territoire == "NA" else "par jour"
         st.markdown(
             f"Quand il fait **{pire['temperature']}** et que l'humidité est à **{pire['humidite']}**, "
             f"on compte **{fr(pire['departs'], 2)} départ de feu {unite}**, "
