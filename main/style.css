@@ -1,30 +1,50 @@
 @import url("https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap");
 
-/* Aucune couleur fixée ici : elles viennent du thème clair ou sombre de .streamlit/config.toml. */
-
-/* Titres en Archivo étroit, comme le lettrage des engins de secours. */
-.stApp h1,
-.stApp h2,
-.stApp h3 {
-  font-stretch: 75%;
-  letter-spacing: -0.01em;
-}
-
-.stApp h1 {
-  font-size: clamp(2.75rem, 7vw, 5rem);
-  font-weight: 800;
-  line-height: 0.95;
-  padding-bottom: 0.25rem;
-}
-
-/* .stApp devant : sinon les règles de Streamlit sur les paragraphes écrasent la taille.
+/* Aucune couleur fixée ici : elles viennent du thème clair ou sombre de .streamlit/config.toml,
+   comme les tailles et graisses des titres (headingFontSizes, headingFontWeights).
    Pas de balise HTML dans ce fichier : st.html supprimerait tout le style. */
+
+/* Moins de vide au-dessus de l'en-tête que Streamlit par défaut (6rem), sans passer sous sa barre du haut. */
+.stApp [data-testid="stMainBlockContainer"] {
+  padding-top: 4.5rem;
+}
+
+/* Seul le titre principal est un peu resserré : il nomme la commande, comme l'objet d'une note de service. */
+.stApp h1 {
+  font-stretch: 87.5%;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+}
+
+/* .stApp devant : sinon les règles de Streamlit sur les paragraphes écrasent la taille. */
 .stApp .chapeau {
-  margin-bottom: 1.5rem;
+  margin: 0.25rem 0 1.75rem;
   text-wrap: pretty;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   line-height: 1.5;
   opacity: 0.8; /* texte du thème, atténué : lisible en clair comme en sombre */
+}
+
+/* Cartouche d'en-tête, comme celui d'une carte ou d'un plan : pour qui, pour quand, avec quelles données. */
+.stApp .cartouche {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0 0 1.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.stApp .cartouche dt {
+  opacity: 0.65;
+}
+
+.stApp .cartouche dd {
+  margin: 0;
+  font-weight: 550;
 }
 
 /* Le pointillé signale ce qui reste à faire. */
@@ -34,8 +54,14 @@
   opacity: 0.7;
 }
 
-.stApp [data-testid="stMarkdownContainer"] p {
+.stApp [data-testid="stMarkdownContainer"] p,
+.stApp [data-testid="stMarkdownContainer"] li {
   max-width: 70ch;
+}
+
+/* Chiffres de même largeur : les indicateurs se comparent d'un coup d'œil. */
+.stApp [data-testid="stMetricValue"] {
+  font-variant-numeric: tabular-nums;
 }
 
 .stApp [data-testid="stTab"] p {
