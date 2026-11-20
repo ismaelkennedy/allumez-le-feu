@@ -2,11 +2,11 @@
 
 ## Lancer le pipeline
 
-Prérequis : Python 3.10 à 3.13.
+Prérequis : Python 3.11 à 3.13.
 
 ```bash
 # 1. Créer l'environnement (une seule fois)
-python3 -m venv .venv
+python3 -m venv .venv              # Windows : python3 -m venv .venv 
 source .venv/bin/activate          # Windows : .venv\Scripts\activate
 pip install -r requirements.txt
 
