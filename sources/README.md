@@ -20,7 +20,7 @@ Les scripts qui dépendent d'une année prennent 2025 par défaut. Pour une autr
 |---|---|---|---|
 | `telecharger_geo.py` | france-geojson, geo.api.gouv.fr | `main/geo/` : contours de la région et des départements, centre des communes | Carte, tableau de bord |
 | `telecharger_meteo.py` | Météo-France, données quotidiennes (data.gouv.fr) | `data/meteo/` : température (RR-T-Vent) et humidité (autres-parametres) par station et par jour, 12 départements | Carte (zones), tableau de bord (redéfinir le seuil) |
-| `telecharger_meteo_des_forets.py` | Météo-France, archives de la Météo des forêts (data.gouv.fr) | `data/meteo_des_forets/` : niveau de danger par département et par jour, de juin à septembre, depuis 2024 | Plus utilisé : le seuil actuel est jugé obsolète. Gardé pour comparer avec le nouveau seuil |
+| `telecharger_meteo_des_forets.py` | Météo-France, archives de la Météo des forêts (data.gouv.fr) | `data/meteo_des_forets/` : niveau de danger par département et par jour, de juin à septembre, depuis 2024 | Tableau de bord (seuil actuel, dans « Redéfinir le seuil ») |
 | `telecharger_osm.py` | OpenStreetMap (API Overpass) | `data/osm/` : casernes et points d'eau incendie (citernes, bassins, points d'aspiration, poteaux incendie) | Tableau de bord (KPI de pilotage) |
 | `calculer_temps_trajet.py` | OSRM (itinéraires sur OpenStreetMap) | `data/osrm/` : temps de trajet par la route depuis la caserne la plus proche, pour chaque commune touchée par un feu | Carte (infobulle des feux), tableau de bord (Q1) |
 | `telecharger_foret.py` | IGN, BD Forêt V2 (image WMS de la Géoplateforme) | `data/ign/` : végétation de la région en 3 niveaux d'inflammabilité (résineux et landes, forêts mélangées, feuillus), environ 300 m par pixel | Carte (végétation) |

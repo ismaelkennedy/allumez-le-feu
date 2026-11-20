@@ -55,6 +55,20 @@ def charger_meteo_departements():
     return meteo.groupby(["Département", "AAAAMMJJ"])[["TX", "UN"]].mean().reset_index()
 
 
+@st.cache_data
+def charger_meteo_des_forets():
+    """Niveau de la Météo des forêts (1 faible à 4 très élevé) par département et par jour, de juin à septembre."""
+    fichiers = sorted((DATA / "meteo_des_forets").glob("mdf_*.csv.gz"))
+    if not fichiers:
+        return None
+    mdf = pd.concat(pd.read_csv(f, usecols=["date", "num_dep", "niveau_j1"], dtype={"num_dep": str}) for f in fichiers)
+    # Le bulletin émis un jour (vers 17 h) donne le niveau du lendemain : on range ce niveau au jour où il s'applique.
+    jour = pd.to_datetime(mdf["date"].str[:10]) + pd.Timedelta(days=1)
+    mdf = mdf.assign(Département=mdf["num_dep"].str.zfill(2), AAAAMMJJ=jour.dt.strftime("%Y%m%d").astype(int))
+    mdf = mdf.drop_duplicates(["Département", "AAAAMMJJ"], keep="last")  # bulletin corrigé : on garde le dernier
+    return mdf[["Département", "AAAAMMJJ"]].assign(niveau=mdf["niveau_j1"])
+
+
 def km_au_plus_proche(lat, lon, points):
     """Distance (km) de chaque position au plus proche des `points` (colonnes lat, lon). Approximation plane."""
     plat, plon = points["lat"].to_numpy(), points["lon"].to_numpy()
