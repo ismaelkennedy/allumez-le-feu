@@ -1,0 +1,41 @@
+name: feux_foret
+version: "0.1.0"
+config-version: 2
+
+profile: feux_foret
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Couches du pipeline (médaillon) :
+#   raw          = bronze : fichiers chargés tels quels par les scripts Python (extract/)
+#   staging      = silver : typé, renommé, minimisé (une vue par source)
+#   intermediate = silver : sources consolidées (tables de correspondance, rejets)
+#   marts        = gold   : schéma en étoile (faits et dimensions)
+models:
+  feux_foret:
+    staging:
+      +schema: staging
+      +materialized: view
+    intermediate:
+      +schema: intermediate
+      +materialized: table
+    marts:
+      +schema: marts
+      +materialized: table
+
+seeds:
+  feux_foret:
+    +schema: referentiel
+
+snapshots:
+  feux_foret:
+    +schema: snapshots

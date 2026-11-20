@@ -1,0 +1,8 @@
+# Versions fixées pour que tout le groupe ait le même environnement.
+# dbt-core est bloqué en 1.11 : la 1.12 télécharge un composant à l'installation,
+# ce qui échoue sur certains Mac (certificats SSL du Python de python.org).
+dbt-core==1.11.17
+dbt-duckdb==1.11.1
+duckdb==2.0.0
+requests==2.34.2
+pandas==3.1.1
